@@ -116,7 +116,7 @@ class Visualizer:
 
         for node, d in self.graph.nodes(data=True):
             x, y = pos[node]
-            if d.get("node_type") in ("Variable", "Scalar"):
+            if d.get("node_type") != "Operation":
                 data_x.append(x)
                 data_y.append(y)
 

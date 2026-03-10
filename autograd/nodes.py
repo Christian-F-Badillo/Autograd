@@ -2,8 +2,6 @@ from __future__ import annotations
 from typing import Set
 import math
 
-from matplotlib import rcdefaults
-
 
 class Node:
     def __init__(
@@ -23,8 +21,15 @@ class Node:
         self._requires_grad = requires_grad
 
     @property
-    def label(self):
+    def label(self) -> str:
         return self._label
+
+    @label.setter
+    def label(self, value: str) -> None:
+        if not isinstance(value, str):
+            raise ValueError("Label must be a string.")
+
+        self._label = value
 
     @property
     def grad(self) -> float:
@@ -33,6 +38,10 @@ class Node:
     @property
     def value(self) -> float | int:
         return self._data
+
+    @value.setter
+    def value(self, value: int | float) -> None:
+        self._data = value
 
     @property
     def parents(self) -> Set[Node]:

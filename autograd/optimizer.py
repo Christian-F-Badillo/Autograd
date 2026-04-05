@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from autograd.nodes import Node
-from typing import List, Optional, Callable
+from typing import Dict, List, Optional, Callable
 
 
 class Optimizer(ABC):
@@ -42,7 +42,7 @@ def minimize(
     tol: float = 1e-6,
     data: Optional[List[List[int | float]]] = None,
     batch_size: Optional[int] = None,
-) -> None:
+) -> Dict[str, float | int]:
     if batch_size and not data:
         raise ValueError("Can not use batch size without data.")
 
@@ -81,8 +81,7 @@ def minimize(
                     "=" * 80,
                     sep="",
                 )
-                print(f"Final values:\n{[node.value for node in targets]}")
-                return None
+                return {node.label: node.value for node in targets}
 
         print(
             "=" * 80,
@@ -90,5 +89,5 @@ def minimize(
             "=" * 80,
             sep="",
         )
-        print(f"Final values:\n{[node.value for node in targets]}")
-        return None
+
+        return {node.label: node.value for node in targets}

@@ -42,7 +42,7 @@ def minimize(
     tol: float = 1e-6,
     data: Optional[List[List[int | float]]] = None,
     batch_size: Optional[int] = None,
-) -> Dict[str, float | int]:
+) -> Dict[str, float]:
     if batch_size and not data:
         raise ValueError("Can not use batch size without data.")
 
@@ -56,6 +56,10 @@ def minimize(
         )
 
     optimizer._setup(targets)
+
+    targets_labels = [
+        node.label if node.label else f"Target {i}" for i, node in enumerate(targets)
+    ]
 
     if not data:  # Fn is a normal function to minimize
         prev_grad = [0.0 for _ in targets]
@@ -81,7 +85,9 @@ def minimize(
                     "=" * 80,
                     sep="",
                 )
-                return {node.label: node.value for node in targets}
+                return {
+                    label: node.value for label, node in zip(targets_labels, targets)
+                }
 
         print(
             "=" * 80,
@@ -90,4 +96,4 @@ def minimize(
             sep="",
         )
 
-        return {node.label: node.value for node in targets}
+        return {label: node.value for label, node in zip(targets_labels, targets)}

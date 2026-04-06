@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from autograd.nodes import Node
 from typing import Dict, List, Optional, Callable
 import math
+import numpy as np
 
 
 class Optimizer(ABC):
@@ -86,6 +87,56 @@ class Adam(Optimizer):
             m_hat = self.m[i] / bias_correction1
 
             var.value -= self.lr * m_hat / (math.sqrt(v_hat) + self.eps)
+
+
+class BFGS(Optimizer):
+    def __init__(self, lr: float = 1.0, epsilon: float = 1e-8) -> None:
+        """
+        Optimizador Cuasi-Newton BFGS.
+        Nota: El 'lr' en BFGS estándar asume un line-search (Búsqueda Lineal).
+        Para funciones de juguete, lr=1.0 o un valor pequeño constante puede bastar.
+        """
+        self._lr = lr
+        self.epsilon = epsilon
+
+    @property
+    def lr(self) -> float:
+        return self._lr
+
+    def _setup(self, vars: List[Node]):
+        self._vars = vars
+        self.n = len(vars)
+
+        self.H = np.eye(self.n)
+
+        self.x_old = None
+        self.grad_old = None
+
+    def step(self):
+        x_curr = np.array([var.value for var in self._vars], dtype=float)
+        grad_curr = np.array([var.grad for var in self._vars], dtype=float)
+
+        if self.x_old is not None:
+            s_k = x_curr - self.x_old
+            y_k = grad_curr - self.grad_old
+
+            dot_ys = np.dot(y_k, s_k)
+            if dot_ys > self.epsilon:
+                rho = 1.0 / dot_ys
+                I = np.eye(self.n)
+
+                A = I - rho * np.outer(s_k, y_k)
+                B = I - rho * np.outer(y_k, s_k)
+
+                self.H = A @ self.H @ B + rho * np.outer(s_k, s_k)
+
+        p_k = -self.H @ grad_curr
+
+        self.x_old = x_curr.copy()
+        self.grad_old = grad_curr.copy()
+
+        for i, var in enumerate(self._vars):
+            var.value += self.lr * p_k[i]
 
 
 def minimize(

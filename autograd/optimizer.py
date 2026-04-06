@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from autograd.nodes import Node
 from typing import Dict, List, Optional, Callable
+import math
 
 
 class Optimizer(ABC):
@@ -34,6 +35,54 @@ class SGD(Optimizer):
             var.value -= self.lr * var.grad
 
 
+class Adam(Optimizer):
+    def __init__(
+        self,
+        lr: float = 0.001,
+        beta1: float = 0.9,
+        beta2: float = 0.999,
+        eps: float = 1e-8,
+    ) -> None:
+        """
+        Optimizador Adam.
+
+        Args:
+            lr (float): Tasa de aprendizaje (alpha).
+            beta1 (float): Decaimiento exponencial para el 1er momento.
+            beta2 (float): Decaimiento exponencial para el 2do momento.
+            eps (float): Término de estabilidad numérica.
+        """
+        self._lr = lr
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.eps = eps
+
+    @property
+    def lr(self) -> float:
+        return self._lr
+
+    def _setup(self, vars: List[Node]):
+        self._vars = vars
+        self.m = [0.0 for _ in vars]
+        self.v = [0.0 for _ in vars]
+        self.t = 0
+
+    def step(self):
+        self.t += 1
+
+        for i, var in enumerate(self._vars):
+            grad = var.grad
+
+            self.m[i] = self.beta1 * self.m[i] + (1 - self.beta1) * grad
+
+            self.v[i] = self.beta2 * self.v[i] + (1 - self.beta2) * (grad**2)
+
+            m_hat = self.m[i] / (1 - self.beta1**self.t)
+            v_hat = self.v[i] / (1 - self.beta2**self.t)
+
+            var.value -= self.lr * m_hat / (math.sqrt(v_hat) + self.eps)
+
+
 def minimize(
     fn: Callable[[], Node],
     targets: List[Node],
@@ -62,8 +111,6 @@ def minimize(
     ]
 
     if not data:  # Fn is a normal function to minimize
-        prev_grad = [0.0 for _ in targets]
-
         for _ in range(max_iter):
             loss_node = fn()
 
@@ -73,12 +120,7 @@ def minimize(
 
             optimizer.step()
 
-            grad_diffs = [
-                abs(prev_grad[i] - node.grad) for i, node in enumerate(targets)
-            ]
-            prev_grad = [node.grad for node in targets]
-
-            if all(diff < tol for diff in grad_diffs):
+            if all(abs(node.grad) < tol for node in targets):
                 print(
                     "=" * 80,
                     "\nAll variables converged successfully\n",

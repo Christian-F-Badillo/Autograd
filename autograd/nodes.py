@@ -17,7 +17,6 @@ class Node:
         self._parents = set(_parents) if _parents else set()
         self._op = _op if _op else ""
         self._grad = 0.0
-        self._backward = lambda: None
         self._requires_grad = requires_grad
 
     @property
@@ -63,6 +62,10 @@ class Node:
         self._grad = 1.0
         for node in reversed(topo_order):
             node._backward()
+
+    # Método a sobrescribir
+    def _backward(self):
+        pass
 
     def __add__(self, other):
         if not isinstance(other, (float, int, Node)):

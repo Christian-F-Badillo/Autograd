@@ -42,20 +42,13 @@ class Adam(Optimizer):
         beta1: float = 0.9,
         beta2: float = 0.999,
         eps: float = 1e-8,
+        amsgrad: bool = True,
     ) -> None:
-        """
-        Optimizador Adam.
-
-        Args:
-            lr (float): Tasa de aprendizaje (alpha).
-            beta1 (float): Decaimiento exponencial para el 1er momento.
-            beta2 (float): Decaimiento exponencial para el 2do momento.
-            eps (float): Término de estabilidad numérica.
-        """
         self._lr = lr
         self.beta1 = beta1
         self.beta2 = beta2
         self.eps = eps
+        self.amsgrad = amsgrad
 
     @property
     def lr(self) -> float:
@@ -65,20 +58,32 @@ class Adam(Optimizer):
         self._vars = vars
         self.m = [0.0 for _ in vars]
         self.v = [0.0 for _ in vars]
+
+        if self.amsgrad:
+            self.v_max = [0.0 for _ in vars]
+
         self.t = 0
 
     def step(self):
         self.t += 1
 
+        bias_correction1 = 1 - self.beta1**self.t
+        bias_correction2 = 1 - self.beta2**self.t
+
         for i, var in enumerate(self._vars):
             grad = var.grad
 
             self.m[i] = self.beta1 * self.m[i] + (1 - self.beta1) * grad
-
             self.v[i] = self.beta2 * self.v[i] + (1 - self.beta2) * (grad**2)
 
-            m_hat = self.m[i] / (1 - self.beta1**self.t)
-            v_hat = self.v[i] / (1 - self.beta2**self.t)
+            if self.amsgrad:
+                self.v_max[i] = max(self.v_max[i], self.v[i])
+
+                v_hat = self.v_max[i] / bias_correction2
+            else:
+                v_hat = self.v[i] / bias_correction2
+
+            m_hat = self.m[i] / bias_correction1
 
             var.value -= self.lr * m_hat / (math.sqrt(v_hat) + self.eps)
 
